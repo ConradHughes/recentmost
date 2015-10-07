@@ -177,7 +177,7 @@ offertoheap(struct heap *h, char *filepath) {
 	}
 }
 #define LINEBUFLEN 100
-void processLines(struct heap *h) {
+void processLines(struct heap *h, char eol) {
 	int c = EOF;
 	size_t linelen = 0;
 	char* filepath = NULL;
@@ -192,7 +192,7 @@ void processLines(struct heap *h) {
 			allocated += LINEBUFLEN;
 			linebuf = realloc(linebuf, sizeof(char) * allocated);
 		}
-		if (c == '\n') {
+		if (c == eol) {
 			linebuf[linelen] = '\0';
 			offertoheap(h, linebuf);
 			memset(linebuf, '\0', sizeof(char)*allocated);
@@ -204,12 +204,14 @@ void processLines(struct heap *h) {
 	free(filepath);
 }
 #define NoTimeArg "-noTime"
+#define NullsNotNewlinesArg "-0"
 void
 usage(char* progname) {
 	fprintf(stderr, "Usage:%s <filecount> [%s (print last modified time)]\n", progname, NoTimeArg);
+	fprintf(stderr, "    [%s (\\0-separated inputs and outputs)]\n", NullsNotNewlinesArg);
 }
 int
-checkInputs(int argc, char** argv, int* N, int* bPrintTime) {
+checkInputs(int argc, char** argv, int* N, int* bPrintTime, char *eol) {
 	if (argc<2) {
 		usage(argv[0]);
 		return 0;
@@ -223,6 +225,11 @@ checkInputs(int argc, char** argv, int* N, int* bPrintTime) {
 	*bPrintTime = 1;
 	if (argc>2 && 0==strncmp(NoTimeArg, argv[2], sizeof(NoTimeArg))) {
 		*bPrintTime = 0;
+	}
+	*eol = '\n';
+	if (argc > 2 && ! strcmp(NullsNotNewlinesArg, argv[2])) {
+		*eol = '\0';
+                *bPrintTime = 0;
 	}
 	return 1;
 }
@@ -254,13 +261,14 @@ int
 main(int argc, char** argv) {
 	int i, N; struct heap hh; int bPrintTime = 0;
 	char timeStr[] = "year-MM-dd hh:mm:ss "; /* just to take care of size */
+        char eol = '\n';
 	HeapElement popped;
-	if (!checkInputs(argc, argv, &N, &bPrintTime)) {
+	if (!checkInputs(argc, argv, &N, &bPrintTime, &eol)) {
 		return -1; 
 	}
 	memset(timeStr, '\0', sizeof(timeStr));
 	heap_init(&hh, N);
-	processLines(&hh);
+	processLines(&hh, eol);
 	for (i=0; i<N*10; i++) {
 		popped = heap_pop(&hh);
 		if (!popped)
@@ -268,7 +276,7 @@ main(int argc, char** argv) {
 		if (bPrintTime) {
 			fillTimeStr(timeStr, popped->modtime);
 		}
-		printf("%s%s\n", timeStr, popped->name);
+		printf("%s%s%c", timeStr, popped->name, eol);
 		heap_freeElement(popped);
 	}
 	heap_term(&hh);
