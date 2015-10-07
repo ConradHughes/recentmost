@@ -11,121 +11,16 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #ifndef _WIN32
-#include <unistd.h>
 #include <time.h>
-typedef unsigned long long rmU64;
 #else
-#include <windows.h>
 #include <wchar.h>
-typedef unsigned __int64 rmU64;
 #endif
+
+#include "heap.h"
 
 #define LINEBUFLEN 100
 #define NoTimeArg "-noTime"
 #define NullsNotNewlinesArg "-0"
-
-/**  Heap implementation  ****************************************************/
-
-/* Thanks to https://gist.github.com/martinkunev/1365481
- * from which basic heap related code was originally taken */
-struct filetimestamp {
-  char* name;
-  rmU64 modtime;
-  int   id;
-};
-typedef struct filetimestamp* HeapElement;
-
-struct heap {
-  size_t       size;
-  size_t       count;
-  HeapElement* data;
-};
-static int instance_count = 0;
-
-#define heap_front(h) (*(h)->data)
-#define heap_term(h) (free((h)->data))
-#define CMP(a, b) ((a->modtime) <= (b->modtime))
-
-HeapElement
-heap_newElement(rmU64 fileModTime, char* filepath)
-{
-  HeapElement elem;
-  ++instance_count;
-  elem = malloc(sizeof(struct filetimestamp));
-  elem->id = instance_count;
-  elem->modtime = fileModTime;
-  elem->name = malloc((1+strlen(filepath))*sizeof(char));
-  strcpy(elem->name, filepath);
-  return elem;
-}
-
-void
-heap_freeElement(HeapElement elem)
-{
-  if (!elem) return;
-  if (elem->name) free(elem->name);
-  free(elem);
-}
-
-void
-heap_init(struct heap *h, int size)
-{
-  h->size  = size;
-  h->count = 0;
-  h->data  = malloc(sizeof(HeapElement) * size);
-  if (!h->data) _exit(1);
-}
-
-HeapElement
-heap_pop(struct heap *h)
-{
-  unsigned int index, swap, other;
-  HeapElement poppedElem = NULL, temp = NULL;
-  if (h->count==0) {
-    return NULL;
-  }
-  poppedElem = h->data[0];
-
-  temp = h->data[--h->count];
-  for(index = 0; 1; index = swap) {
-    swap = (index << 1) + 1;
-    if (swap >= h->count) break;
-    other = swap + 1;
-    if ((other < h->count) && CMP(h->data[other], h->data[swap])) swap = other;
-    if CMP(temp, h->data[swap]) break;
-    h->data[index] = h->data[swap];
-  }
-  h->data[index] = temp;
-  return poppedElem;
-}
-
-int
-heap_push(struct heap *h, HeapElement value)
-{
-  unsigned int index, parent;
-  if (h->count>0) {
-    if (h->count < h->size) {
-      /* go ahead */
-    } else {
-      HeapElement min_in_top = heap_front(h);
-      if (CMP(min_in_top, value)) {
-        heap_freeElement(heap_pop(h));
-      } else {
-        return 0;
-      }
-    }
-  }
-  for(index = h->count++; index; index = parent)
-  {
-    parent = (index - 1) >> 1;
-    if CMP(h->data[parent], value) break;
-    h->data[index] = h->data[parent];
-  }
-  h->data[index] = value;
-  return 1;
-}
-
-/**  End heap implementation  ************************************************/
 
 int
 getFileModTime(const char* filepath, rmU64* out_FileModTime)
@@ -158,7 +53,7 @@ getFileModTime(const char* filepath, rmU64* out_FileModTime)
 }
 
 void
-offertoheap(struct heap *h, char *filepath)
+offertoheap(Heap h, char *filepath)
 {
   HeapElement elem = NULL;
   rmU64 fileModTime = 0;
@@ -174,7 +69,8 @@ offertoheap(struct heap *h, char *filepath)
   }
 }
 
-void processLines(struct heap *h, char eol)
+void
+processLines(Heap h, char eol)
 {
   int c = EOF;
   size_t linelen = 0;
@@ -266,7 +162,7 @@ main(int argc, char** argv)
 {
   int i;
   int N; 
-  struct heap hh;
+  Heap hh;
   int bPrintTime = 0;
   char timeStr[] = "year-MM-dd hh:mm:ss "; /* just to take care of size */
   char eol = '\n';
@@ -275,10 +171,10 @@ main(int argc, char** argv)
     return -1;
   }
   memset(timeStr, '\0', sizeof(timeStr));
-  heap_init(&hh, N);
-  processLines(&hh, eol);
+  hh = heap_alloc(N);
+  processLines(hh, eol);
   for (i=0; i<N*10; i++) {
-    popped = heap_pop(&hh);
+    popped = heap_pop(hh);
     if (!popped)
       break;
     if (bPrintTime) {
@@ -287,6 +183,6 @@ main(int argc, char** argv)
     printf("%s%s%c", timeStr, popped->name, eol);
     heap_freeElement(popped);
   }
-  heap_term(&hh);
+  heap_free(hh);
   return 0;
 }
