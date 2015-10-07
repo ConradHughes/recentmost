@@ -47,8 +47,8 @@ typedef unsigned long long rmU64;
 typedef unsigned __int64 rmU64;
 #endif
 
-// Thanks to https://gist.github.com/martinkunev/1365481
-// from which basic heap related code was originally taken
+/* Thanks to https://gist.github.com/martinkunev/1365481
+ * from which basic heap related code was originally taken */
 struct filetimestamp {
 	char* name;
 	rmU64 modtime;
@@ -114,7 +114,7 @@ heap_push(struct heap *h, HeapElement value) {
 	unsigned int index, parent;
 	if (h->count>0) {
 		if (h->count < h->size) {
-			// go ahead
+			/* go ahead */
 		} else {
 			HeapElement min_in_top = heap_front(h);
 			if (CMP(min_in_top, value)) {
@@ -166,8 +166,8 @@ offertoheap(struct heap *h, char *filepath) {
 	HeapElement elem = NULL;
 	rmU64 fileModTime = 0;
 	if (0!=getFileModTime(filepath, &fileModTime)) {
-		//error - but msg already shown
-		//fprintf(stderr, "error: could not find or get mod time for filepath '%s'\n", filepath);
+		/* error - but msg already shown */
+		/* fprintf(stderr, "error: could not find or get mod time for filepath '%s'\n", filepath); */
 	} else {
 		elem = heap_newElement(fileModTime, filepath);
 		if (!heap_push(h, elem)) {
@@ -253,7 +253,7 @@ fillTimeStr(char* timeStr, rmU64 time) {
 int
 main(int argc, char** argv) {
 	int i, N; struct heap hh; int bPrintTime = 0;
-	char timeStr[] = "year-MM-dd hh:mm:ss ";//just to take care of size
+	char timeStr[] = "year-MM-dd hh:mm:ss "; /* just to take care of size */
 	HeapElement popped;
 	if (!checkInputs(argc, argv, &N, &bPrintTime)) {
 		return -1; 
