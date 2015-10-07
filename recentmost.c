@@ -195,7 +195,7 @@ void processLines(struct heap *h) {
 		if (c == '\n') {
 			linebuf[linelen] = '\0';
 			offertoheap(h, linebuf);
-			memset(linebuf, '\0', sizeof(linebuf));
+			memset(linebuf, '\0', sizeof(char)*allocated);
 			linelen = 0;
 			continue;
 		}
