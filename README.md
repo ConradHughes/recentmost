@@ -6,7 +6,17 @@ gvien a basedir, find most recently modified files
 
 Why This
 --------
+
 many a times we want to find out most recently modified files on system within a directory - it may be codebase, or configuration files, where we might have been changing things in order to make it work - but in the end when it finally would begin to work, we may have lost track of which files had we touched.
+
+Switches
+--------
+
+* *-noTime*: default behaviour shows time beside filenames; this stops
+  that: easier to work with find/xargs pipelines.
+* *-0*: expect filenames to be `\0`-separated on stdin, and print them
+  separated by `\0` on stdout; implies *-noTime*.  For working with
+  `find -print0` and `xargs -0`.
 
 Existing ways to achieve it
 ---------------------------
